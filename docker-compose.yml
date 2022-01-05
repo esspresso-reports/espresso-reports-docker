@@ -1,0 +1,66 @@
+version: '3.1'
+
+services:
+  db:
+    container_name: local_postgres
+    image: postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: example
+      POSTGRES_USER: postgres
+      ESPRESSO_DB_NAME: espresso_api
+      ESPRESSO_DB_USER: espresso_api
+      ESPRESSO_DB_PASSWORD: mys3cur3pwd
+      KEYCLOAK_DB_NAME: keycloak
+      KEYCLOAK_DB_USER: keycloak
+      KEYCLOAK_DB_PASSWORD: mys3cur3pwd
+    volumes:
+      - ./docker/postgresql/init_database.sh:/docker-entrypoint-initdb.d/init-database.sh
+      - espresso_db:/var/lib/postgresql/data
+
+#  api:
+#    container_name: espresso_rest_api
+#    depends_on:
+#      - db
+#    build: .
+#    ports:
+#      - "5000:5000"
+#    environment:
+#      ESPRESSO_DATABASE_URL: db
+#      ESPRESSO_DATABASE_USER: espresso_api
+#      ESPRESSO_DATABASE_NAME: espresso_api
+#      ESPRESSO_DATABASE_PASSWORD: mys3cure3pwd
+
+  keycloak:
+    depends_on:
+      - db
+    image: quay.io/keycloak/keycloak:latest
+    container_name: local_keycloak
+    restart: unless-stopped
+
+    volumes:
+      - ./docker/keycloak/login_page:/opt/jboss/keycloak/themes/espresso
+
+# uncomment when developing login theme
+#      - ./docker/keycloak/standalone.xml:/opt/jboss/keycloak/standalone/configuration/standalone.xml
+#      - ./docker/keycloak/standalone.xml:/opt/jboss/keycloak/standalone/configuration/standalone-ha.xml
+
+    ports:
+      - "8080:8080"
+      - "443:8443"
+
+    environment:
+      PROXY_ADDRESS_FORWARDING: "true"
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      DB_VENDOR: postgres
+      DB_ADDR: db
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_PASSWORD: mys3cur3pwd
+
+volumes:
+  espresso_db:
+    driver: local
